@@ -7,7 +7,12 @@ from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 import pandas as pd
 
-MAX_REPLIES = 100
+MAX_REPLIES = 500
+MIN_REPLY_SCORE = 2
+MAX_FEATURES = 2000
+MAX_REPLY_LENGTH = 250
+SUBMISSION_COUNT = 100
+SUBREDDIT = "funny"
 
 def get_submission_reply_pairs(submission):
     message_replies = []
@@ -25,6 +30,7 @@ def get_submission_reply_pairs(submission):
                             actual_replies.append(mc_reply)
                 elif isinstance(reply, Comment):
                     actual_replies.append(reply)
+            actual_replies = [ar for ar in actual_replies if ar.score>=MIN_REPLY_SCORE]
             reply_text = [ar.body for ar in actual_replies]
             scores = [ar.score for ar in actual_replies]
             if len(reply_text)>0:
@@ -47,10 +53,10 @@ class MessageReply:
 
 def get_message_replies():
     r = praw.Reddit(user_agent='comment_matcher by /u/vikparuchuri github.com/VikParuchuri/comment_matcher/')
-    subreddit = r.get_subreddit('funny')
+    subreddit = r.get_subreddit(SUBREDDIT)
 
     message_replies = []
-    for submission in subreddit.get_hot(limit=10):
+    for submission in subreddit.get_top_from_month(limit=SUBMISSION_COUNT):
         message_replies += get_submission_reply_pairs(submission)
         if len(message_replies)>=MAX_REPLIES:
             break
@@ -66,7 +72,7 @@ def create_match_matrix(table_data, pd_frame):
 
     mean_score = np.mean(pd_frame['reply_score'])
 
-    vectorizer = CountVectorizer(ngram_range=(1,2), min_df = 2/len(table_data), max_df=.6)
+    vectorizer = CountVectorizer(ngram_range=(1,2), min_df = 3/len(table_data), max_df=.4, max_features=MAX_FEATURES)
     all_text = list(set([t[0] for t in table_data] + [t[2] for t in table_data]))
     vectorizer.fit(all_text)
 
@@ -118,6 +124,8 @@ message_replies = get_message_replies()
 
 table_data = list(chain.from_iterable([mr.get_table_data() for mr in message_replies]))
 pd_frame = pd.DataFrame(np.array(table_data),columns=["message", "message_score", "reply", "reply_score"])
+pd_frame['reply_score'] = pd_frame['reply_score'].map(lambda x : int(x))
+pd_frame['message_score'] = pd_frame['message_score'].map(lambda x : int(x))
 
 match_mat, vectorizer = create_match_matrix(table_data, pd_frame)
 
@@ -126,13 +134,16 @@ reply_matrix = create_reply_matrix(pd_frame['reply'], vectorizer)
 input_set = list(set(pd_frame['message']))
 replies = []
 reply_accurate = []
-for z in xrange(0,5):
+up_to = len(input_set)
+for z in xrange(0,up_to):
     input_text = input_set[z]
     input_replies = pd_frame['reply'][pd_frame['message']==input_text]
     input_match = find_input_match(input_text, reply_matrix, match_mat, vectorizer, pd_frame['reply'])
     reply_message = pd_frame['reply'][input_match]
     replies.append(reply_message)
     reply_accurate.append(reply_message in input_replies.tolist())
+
+rep_frame = pd.DataFrame(np.transpose(np.vstack((input_set[:up_to],replies, reply_accurate))), columns=["message", "reply", "correct"])
 
 
 
