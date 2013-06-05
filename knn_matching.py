@@ -76,6 +76,7 @@ class KNNCommentMatcher(object):
             text = text['message']
         if not isinstance(text, list):
             text = [text]
+        self.validate_reply(text)
         nearest_match = self.find_nearest_match(text)
         raw_data = self.train[nearest_match]
         reply = self.get_highest_rated_comment(raw_data)
@@ -163,19 +164,20 @@ def write_data_to_cache(raw_data, filename="raw_data_cache.p"):
     pickle.dump(raw_data_cache, open(filename, "w"))
     return raw_data_cache
 
-message_replies = get_message_replies(subreddit = "funny", max_replies= 500, submission_count = 300, min_reply_score = 20)
+if __name__ == '__main__':
+    message_replies = get_message_replies(subreddit = "funny", max_replies= 500, submission_count = 300, min_reply_score = 20)
 
-raw_data = list([mr.get_raw_data() for mr in message_replies])
+    raw_data = list([mr.get_raw_data() for mr in message_replies])
 
-raw_data = write_data_to_cache(raw_data)
+    raw_data = write_data_to_cache(raw_data)
 
-test_results = cross_validate(raw_data,train_knn_matcher, test_knn_matcher)
+    test_results = cross_validate(raw_data,train_knn_matcher, test_knn_matcher)
 
-for i in xrange(0,len(test_results)):
-    print i
-    print raw_data[i]['message']
-    print test_results[i]
-    print "------------------"
+    for i in xrange(0,len(test_results)):
+        print i
+        print raw_data[i]['message']
+        print test_results[i]
+        print "------------------"
 
 
 

@@ -6,8 +6,11 @@ from datetime import timedelta
 import functools
 import os
 import time
+import logging
 
-celery = Celery('tasks', broker='redis://localhost:6379/93', backend='redis://localhost:6379/93')
+log = logging.getLogger(__name__)
+
+celery = Celery('tasks', broker='redis://localhost:6379/7', backend='redis://localhost:6379/7')
 SUBREDDIT_LIST = ["funny", "pics", "gaming"]
 
 class FileCache(object):
@@ -48,9 +51,12 @@ def single_instance_task(timeout):
 @periodic_task(run_every=timedelta(minutes = 30))
 @single_instance_task(timeout=3 * 60 * 60)
 def get_reddit_posts():
-    all_message_replies = []
-    for subreddit in SUBREDDIT_LIST:
-        message_replies = get_message_replies(subreddit =subreddit, max_replies= 500, submission_count = 300, min_reply_score = 20)
-        all_message_replies += message_replies
-    raw_data = list([mr.get_raw_data() for mr in all_message_replies])
-    write_data_to_cache(raw_data)
+    try:
+        all_message_replies = []
+        for subreddit in SUBREDDIT_LIST:
+            message_replies = get_message_replies(subreddit =subreddit, max_replies= 500, submission_count = 300, min_reply_score = 20)
+            all_message_replies += message_replies
+        raw_data = list([mr.get_raw_data() for mr in all_message_replies])
+        write_data_to_cache(raw_data)
+    except:
+        log.exception("Could not save posts.")

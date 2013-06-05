@@ -1,6 +1,8 @@
 from __future__ import division
 import praw
 from praw.objects import Comment, MoreComments
+import logging
+log = logging.getLogger(__name__)
 
 MAX_REPLIES = 500
 MIN_REPLY_SCORE = 2
@@ -15,21 +17,25 @@ def get_submission_reply_pairs(submission, max_replies = MAX_REPLIES, min_reply_
     while len(forest_comments)>0 and len(message_replies)<MAX_REPLIES:
         actual_replies = []
         for comment in forest_comments:
-            replies = comment.replies
-            actual_replies = []
-            for reply in replies:
-                if isinstance(reply, MoreComments):
-                    mc_replies = reply.comments()
-                    for mc_reply in mc_replies:
-                        if isinstance(mc_reply, Comment):
-                            actual_replies.append(mc_reply)
-                elif isinstance(reply, Comment):
-                    actual_replies.append(reply)
-            actual_replies = [ar for ar in actual_replies if ar.score>=MIN_REPLY_SCORE]
-            reply_text = [ar.body for ar in actual_replies]
-            scores = [ar.score for ar in actual_replies]
-            if len(reply_text)>0:
-                message_replies.append(MessageReply(comment.body, comment.score, reply_text, scores))
+            try:
+                replies = comment.replies
+                actual_replies = []
+                for reply in replies:
+                    if isinstance(reply, MoreComments):
+                        mc_replies = reply.comments()
+                        for mc_reply in mc_replies:
+                            if isinstance(mc_reply, Comment):
+                                actual_replies.append(mc_reply)
+                    elif isinstance(reply, Comment):
+                        actual_replies.append(reply)
+                actual_replies = [ar for ar in actual_replies if ar.score>=MIN_REPLY_SCORE]
+                reply_text = [ar.body for ar in actual_replies]
+                scores = [ar.score for ar in actual_replies]
+                if len(reply_text)>0:
+                    message_replies.append(MessageReply(comment.body, comment.score, reply_text, scores))
+            except:
+                log.exception("Could not pull single comment data.")
+                continue
         forest_comments = [ar for ar in actual_replies if isinstance(actual_replies, Comment)]
     return message_replies
 
