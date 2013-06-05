@@ -67,30 +67,31 @@ def find_input_match(input_text, reply_matrix, match_mat, vectorizer, reply_text
 def create_reply_matrix(reply_text, vectorizer):
     return vectorizer.transform(reply_text)
 
-message_replies = get_message_replies()
+if __name__ == '__main__':
+    message_replies = get_message_replies()
 
-table_data = list(chain.from_iterable([mr.get_table_data() for mr in message_replies]))
-pd_frame = pd.DataFrame(np.array(table_data),columns=["message", "message_score", "reply", "reply_score"])
-pd_frame['reply_score'] = pd_frame['reply_score'].map(lambda x : int(x))
-pd_frame['message_score'] = pd_frame['message_score'].map(lambda x : int(x))
+    table_data = list(chain.from_iterable([mr.get_table_data() for mr in message_replies]))
+    pd_frame = pd.DataFrame(np.array(table_data),columns=["message", "message_score", "reply", "reply_score"])
+    pd_frame['reply_score'] = pd_frame['reply_score'].map(lambda x : int(x))
+    pd_frame['message_score'] = pd_frame['message_score'].map(lambda x : int(x))
 
-match_mat, vectorizer = create_match_matrix(table_data, pd_frame)
+    match_mat, vectorizer = create_match_matrix(table_data, pd_frame)
 
-reply_matrix = create_reply_matrix(pd_frame['reply'], vectorizer)
+    reply_matrix = create_reply_matrix(pd_frame['reply'], vectorizer)
 
-input_set = list(set(pd_frame['message']))
-replies = []
-reply_accurate = []
-up_to = len(input_set)
-for z in xrange(0,up_to):
-    input_text = input_set[z]
-    input_replies = pd_frame['reply'][pd_frame['message']==input_text]
-    input_match = find_input_match(input_text, reply_matrix, match_mat, vectorizer, pd_frame['reply'])
-    reply_message = pd_frame['reply'][input_match]
-    replies.append(reply_message)
-    reply_accurate.append(reply_message in input_replies.tolist())
+    input_set = list(set(pd_frame['message']))
+    replies = []
+    reply_accurate = []
+    up_to = len(input_set)
+    for z in xrange(0,up_to):
+        input_text = input_set[z]
+        input_replies = pd_frame['reply'][pd_frame['message']==input_text]
+        input_match = find_input_match(input_text, reply_matrix, match_mat, vectorizer, pd_frame['reply'])
+        reply_message = pd_frame['reply'][input_match]
+        replies.append(reply_message)
+        reply_accurate.append(reply_message in input_replies.tolist())
 
-rep_frame = pd.DataFrame(np.transpose(np.vstack((input_set[:up_to],replies, reply_accurate))), columns=["message", "reply", "correct"])
+    rep_frame = pd.DataFrame(np.transpose(np.vstack((input_set[:up_to],replies, reply_accurate))), columns=["message", "reply", "correct"])
 
 
 

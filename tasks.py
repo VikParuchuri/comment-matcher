@@ -10,11 +10,12 @@ import logging
 import time
 import random
 import sys
+import settings
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler(sys.stdout))
 
-celery = Celery('tasks', broker='redis://localhost:6379/7', backend='redis://localhost:6379/7')
+celery = Celery('tasks', broker=settings.BROKER_URL, backend=settings.CELERY_RESULT_BACKEND)
 SUBREDDIT_LIST = ["funny", "pics", "gaming"]
 
 class FileCache(object):

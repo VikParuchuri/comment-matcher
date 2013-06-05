@@ -14,6 +14,10 @@ import math
 import pickle
 import logging
 import sys
+import settings
+import re
+import collections
+from nltk.stem.porter import PorterStemmer
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler(sys.stdout))
@@ -21,16 +25,63 @@ log.addHandler(logging.StreamHandler(sys.stdout))
 MIN_WORDS = 2
 MAX_COMMENT_LENGTH = 100
 
+class SpellCorrector(object):
+    """
+    Taken and slightly adapted from peter norvig's post at http://norvig.com/spell-correct.html
+    """
+
+    alphabet = 'abcdefghijklmnopqrstuvwxyz'
+
+    def __init__(self):
+        self.NWORDS = self.train(self.words(file('big.txt').read()))
+
+    def words(self, text):
+        return re.findall('[a-z]+', text.lower())
+
+    def train(self, features):
+        model = collections.defaultdict(lambda: 1)
+        for f in features:
+            model[f] += 1
+        return model
+
+    def edits1(self, word):
+        splits     = [(word[:i], word[i:]) for i in range(len(word) + 1)]
+        deletes    = [a + b[1:] for a, b in splits if b]
+        transposes = [a + b[1] + b[0] + b[2:] for a, b in splits if len(b)>1]
+        replaces   = [a + c + b[1:] for a, b in splits for c in self.alphabet if b]
+        inserts    = [a + c + b     for a, b in splits for c in self.alphabet]
+        return set(deletes + transposes + replaces + inserts)
+
+    def known_edits2(self, word):
+        return set(e2 for e1 in self.edits1(word) for e2 in self.edits1(e1) if e2 in self.NWORDS)
+
+    def known(self, words): return set(w for w in words if w in self.NWORDS)
+
+    def correct(self, word):
+        candidates = self.known([word]) or self.known(self.edits1(word)) or self.known_edits2(word) or [word]
+        return max(candidates, key=self.NWORDS.get)
+
 class Vectorizer(object):
     def __init__(self):
         self.fit_done = False
 
     def fit(self, input_text, input_scores):
+        self.spell_corrector = SpellCorrector()
+        self.stemmer = PorterStemmer()
+        input_text = [t + self.generate_new_text(t) for t in input_text]
         self.vectorizer1 = CountVectorizer(ngram_range=(1,2), min_df = 3/len(input_text), max_df=.4)
         self.vectorizer1.fit(input_text)
         self.vocab = self.get_vocab(input_text, input_scores)
         self.vectorizer = CountVectorizer(ngram_range=(1,2), vocabulary=self.vocab)
         self.fit_done = True
+
+    def generate_new_text(self, text):
+        no_punctuation = re.sub("[^A-Za-z0-9]", " ", text.lower())
+        no_punctuation = re.sub("\s+", " ", no_punctuation)
+        split = no_punctuation.split(" ")
+        corrected = [self.stemmer.stem(self.spell_corrector.correct(w)) for w in split]
+        new = " ".join(corrected)
+        return new
 
     def get_vocab(self, input_text, input_scores):
         train_mat = self.vectorizer1.transform(input_text)
@@ -57,7 +108,8 @@ class Vectorizer(object):
     def get_features(self, text):
         if not self.fit_done:
             raise Exception("Vectorizer has not been created.")
-        return (self.vectorizer.transform(text).todense())
+        new_text = self.generate_new_text(text)
+        return (self.vectorizer.transform(text + new_text).todense())
 
 class KNNCommentMatcher(object):
     def __init__(self, train_data):
@@ -85,6 +137,9 @@ class KNNCommentMatcher(object):
         nearest_match = self.find_nearest_match(text)
         raw_data = self.train[nearest_match]
         reply = self.get_highest_rated_comment(raw_data)
+        if isinstance(reply, list):
+            reply = reply[0]
+        reply = self.vectorizer.generate_new_text(reply)
         return self.validate_reply(reply)
 
     def get_highest_rated_comment(self, raw_data):
@@ -102,6 +157,10 @@ class KNNCommentMatcher(object):
             return None
         elif ".com" in reply or ".net" in reply or "http://" in reply or "www." in reply:
             return None
+
+        for word in settings.BAD_WORD_LIST:
+            if word in reply:
+                return None
 
         return reply
 

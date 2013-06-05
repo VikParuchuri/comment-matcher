@@ -5,6 +5,7 @@ import random
 import logging
 import pickle
 import sys
+import settings
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler(sys.stdout))
@@ -42,7 +43,7 @@ def get_single_comment(subreddit_name):
     comment_found = False
     index = 0
     while not comment_found:
-        r = praw.Reddit(user_agent='comment_matcher by /u/vikparuchuri github.com/VikParuchuri/comment_matcher/')
+        r = praw.Reddit(user_agent=settings.BOT_USER_AGENT)
         subreddit = r.get_subreddit(subreddit_name)
         hourly_top = list(subreddit.get_top_from_hour(limit=(index+1)))
         comments = [c for c in hourly_top[index].comments if isinstance(c, Comment)]
@@ -105,7 +106,7 @@ class MessageReply(object):
             }
 
 def get_message_replies(subreddit = SUBREDDIT, max_replies = MAX_REPLIES, submission_count = SUBMISSION_COUNT, min_reply_score = MIN_REPLY_SCORE):
-    r = praw.Reddit(user_agent='comment_matcher by /u/vikparuchuri github.com/VikParuchuri/comment_matcher/')
+    r = praw.Reddit(user_agent=settings.BOT_USER_AGENT)
     subreddit = r.get_subreddit(subreddit)
 
     message_replies = []

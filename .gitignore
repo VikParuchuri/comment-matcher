@@ -42,3 +42,4 @@ nosetests.xml
 celerybeat-schedule
 celery-single-instance-pull_down_comments
 celery-single-instance-get_reddit_posts
+secret.json
