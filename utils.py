@@ -1,7 +1,9 @@
 from __future__ import division
 import praw
 from praw.objects import Comment, MoreComments
+import random
 import logging
+import pickle
 log = logging.getLogger(__name__)
 
 MAX_REPLIES = 500
@@ -10,6 +12,37 @@ MAX_FEATURES = 2000
 MAX_REPLY_LENGTH = 250
 SUBMISSION_COUNT = 100
 SUBREDDIT = "funny"
+
+def read_raw_data_from_cache(filename):
+    try:
+        raw_data_cache = pickle.load(open(filename, "r"))
+    except Exception:
+        raw_data_cache = []
+    return raw_data_cache
+
+def write_data_to_cache(raw_data, filename, unique_key="message"):
+    raw_data_cache = read_raw_data_from_cache(filename)
+    raw_data_messages = [r[unique_key] for r in raw_data_cache]
+    for r in raw_data:
+        if r[unique_key] in raw_data_messages:
+            del_index = raw_data_messages.index(r[unique_key])
+            del raw_data_cache[del_index]
+            del raw_data_messages[del_index]
+    raw_data_to_write = [r for r in raw_data if r not in raw_data_cache]
+    raw_data_cache += raw_data_to_write
+    
+    with open(filename, "w") as openfile:
+        pickle.dump(raw_data_cache, openfile)
+    return raw_data_cache
+
+def get_single_comment(subreddit):
+    r = praw.Reddit(user_agent='comment_matcher by /u/vikparuchuri github.com/VikParuchuri/comment_matcher/')
+    subreddit = r.get_subreddit(subreddit)
+    hourly_top = subreddit.get_top_from_hour(limit=1)
+    comments = forest_comments = [c for c in hourly_top[0].comments if isinstance(c, Comment)]
+    rand_int = random.randint(0,len(comments))
+    random_comment = comments[rand_int]
+    return random_comment
 
 def get_submission_reply_pairs(submission, max_replies = MAX_REPLIES, min_reply_score = MIN_REPLY_SCORE):
     message_replies = []

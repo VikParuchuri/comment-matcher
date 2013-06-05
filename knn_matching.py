@@ -6,7 +6,7 @@ import nltk
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 import pandas as pd
-from utils import get_message_replies, MessageReply, get_submission_reply_pairs
+from utils import get_message_replies, MessageReply, get_submission_reply_pairs, read_raw_data_from_cache, write_data_to_cache
 from scipy.spatial.distance import euclidean
 from fisher import pvalue
 import random
@@ -143,33 +143,12 @@ def test_accuracy(test_results, raw_data):
             correct.append(False)
     return correct
 
-def read_raw_data_from_cache(filename="raw_data_cache.p"):
-    try:
-        raw_data_cache = pickle.load(open(filename, "r"))
-    except Exception:
-        raw_data_cache = []
-    return raw_data_cache
-
-def write_data_to_cache(raw_data, filename="raw_data_cache.p"):
-    raw_data_cache = read_raw_data_from_cache(filename)
-    raw_data_messages = [r['message'] for r in raw_data_cache]
-    for r in raw_data:
-        if r['message'] in raw_data_messages:
-            del_index = raw_data_messages.index(r['message'])
-            del raw_data_cache[del_index]
-            del raw_data_messages[del_index]
-    raw_data_to_write = [r for r in raw_data if r not in raw_data_cache]
-    raw_data_cache += raw_data_to_write
-
-    pickle.dump(raw_data_cache, open(filename, "w"))
-    return raw_data_cache
-
 if __name__ == '__main__':
     message_replies = get_message_replies(subreddit = "funny", max_replies= 500, submission_count = 300, min_reply_score = 20)
 
     raw_data = list([mr.get_raw_data() for mr in message_replies])
 
-    raw_data = write_data_to_cache(raw_data)
+    raw_data = write_data_to_cache(raw_data, "raw_data_cache.p")
 
     test_results = cross_validate(raw_data,train_knn_matcher, test_knn_matcher)
 
