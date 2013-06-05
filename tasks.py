@@ -79,15 +79,19 @@ def pull_down_comments():
         knn_matcher = train_knn_matcher(raw_data)
         for subreddit in SUBREDDIT_LIST:
             comment = get_single_comment(subreddit)
+            print comment
             if comment is None:
+                log.info("Could not get a comment")
                 continue
             text = comment.body
             cid = comment.id
             reply = test_knn_matcher(knn_matcher, text)
-            if text in comments or reply in replies:
+            if text in comments or (reply in replies and reply is not None):
                 continue
             data = {'comment' : text, 'reply' : reply, 'comment_id' : cid}
             items_done.append(data)
+            replies.append(reply)
+            comments.append(text)
             log.info("Subreddit: {0}".format(subreddit))
             log.info("Comment: {0} {1}".format(cid, text))
             log.info("Reply: {0}".format(reply))

@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler(sys.stdout))
 
 MIN_WORDS = 2
-MAX_COMMENT_LENGTH = 100
+MAX_COMMENT_LENGTH = 250
 
 class SpellCorrector(object):
     """
@@ -156,7 +156,7 @@ class KNNCommentMatcher(object):
         reply = self.get_highest_rated_comment(raw_data)
         if isinstance(reply, list):
             reply = reply[0]
-        reply = self.vectorizer.spell_correct_text(reply)
+        reply = " " .join(self.vectorizer.spell_correct_text(reply))
         return self.validate_reply(reply)
 
     def get_highest_rated_comment(self, raw_data):
@@ -166,6 +166,7 @@ class KNNCommentMatcher(object):
         return rep_frame['replies'][rand_int]
 
     def validate_reply(self, reply):
+        print reply
         if isinstance(reply, list):
             reply = reply[0]
         if len(reply.split(" "))<MIN_WORDS:
