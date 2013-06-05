@@ -59,11 +59,13 @@ class SpellCorrector(object):
     def known(self, words): return set(w for w in words if w in self.NWORDS)
 
     def correct(self, word):
+        suffix = ""
         for p in self.punctuation:
             if word.endswith(p):
-                return word
+                suffix = p
         candidates = self.known([word]) or self.known(self.edits1(word)) or self.known_edits2(word) or [word]
-        return max(candidates, key=self.NWORDS.get)
+        word = max(candidates, key=self.NWORDS.get)
+        return word + suffix
 
 class Vectorizer(object):
     def __init__(self):
