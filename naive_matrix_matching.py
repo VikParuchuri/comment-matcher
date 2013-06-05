@@ -6,7 +6,7 @@ import nltk
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 import pandas as pd
-from utils import get_message_replies, MessageReply, get_submission_reply_pairs
+from utils import get_message_replies, MessageReply, get_submission_reply_pairs, MAX_FEATURES
 
 
 

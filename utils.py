@@ -33,7 +33,7 @@ def get_submission_reply_pairs(submission, max_replies = MAX_REPLIES, min_reply_
         forest_comments = [ar for ar in actual_replies if isinstance(actual_replies, Comment)]
     return message_replies
 
-class MessageReply:
+class MessageReply(object):
     def __init__(self, message, message_score, replies, scores):
         self.message = message
         self.message_score = message_score
@@ -45,6 +45,14 @@ class MessageReply:
         for i in xrange(0,len(self.replies)):
             rows.append([self.message, int(self.message_score), self.replies[i], int(self.scores[i])])
         return rows
+
+    def get_raw_data(self):
+        return {
+            'message' : self.message,
+            'message_score' : self.message_score,
+            'replies' : self.replies,
+            'scores' : self.scores
+            }
 
 def get_message_replies(subreddit = SUBREDDIT, max_replies = MAX_REPLIES, submission_count = SUBMISSION_COUNT, min_reply_score = MIN_REPLY_SCORE):
     r = praw.Reddit(user_agent='comment_matcher by /u/vikparuchuri github.com/VikParuchuri/comment_matcher/')
