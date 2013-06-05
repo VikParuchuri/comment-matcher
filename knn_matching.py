@@ -31,6 +31,7 @@ class SpellCorrector(object):
     """
 
     alphabet = 'abcdefghijklmnopqrstuvwxyz'
+    punctuation = [".", "!", "?", ","]
 
     def __init__(self):
         self.NWORDS = self.train(self.words(file('big.txt').read()))
@@ -58,6 +59,9 @@ class SpellCorrector(object):
     def known(self, words): return set(w for w in words if w in self.NWORDS)
 
     def correct(self, word):
+        for p in self.punctuation:
+            if word.endswith(p):
+                return word
         candidates = self.known([word]) or self.known(self.edits1(word)) or self.known_edits2(word) or [word]
         return max(candidates, key=self.NWORDS.get)
 
@@ -75,11 +79,17 @@ class Vectorizer(object):
         self.vectorizer = CountVectorizer(ngram_range=(1,2), vocabulary=self.vocab)
         self.fit_done = True
 
+    def spell_correct_text(self, text):
+        text = text.lower()
+        split = text.split(" ")
+        corrected = [self.spell_corrector.correct(w) for w in split]
+        return corrected
+
     def generate_new_text(self, text):
         no_punctuation = re.sub("[^A-Za-z0-9]", " ", text.lower())
         no_punctuation = re.sub("\s+", " ", no_punctuation)
-        split = no_punctuation.split(" ")
-        corrected = [self.stemmer.stem(self.spell_corrector.correct(w)) for w in split]
+        corrected = self.spell_correct_text(no_punctuation)
+        corrected = [self.stemmer.stem(w) for w in corrected]
         new = " ".join(corrected)
         return new
 
@@ -108,8 +118,15 @@ class Vectorizer(object):
     def get_features(self, text):
         if not self.fit_done:
             raise Exception("Vectorizer has not been created.")
-        new_text = self.generate_new_text(text)
-        return (self.vectorizer.transform(text + new_text).todense())
+        itext=text
+        if isinstance(text, list):
+            itext = text[0]
+        new_text = self.generate_new_text(itext)
+        if isinstance(text, list):
+            text = [text[0] + new_text]
+        else:
+            text = text + new_text
+        return (self.vectorizer.transform(text).todense())
 
 class KNNCommentMatcher(object):
     def __init__(self, train_data):
@@ -139,7 +156,7 @@ class KNNCommentMatcher(object):
         reply = self.get_highest_rated_comment(raw_data)
         if isinstance(reply, list):
             reply = reply[0]
-        reply = self.vectorizer.generate_new_text(reply)
+        reply = self.vectorizer.spell_correct_text(reply)
         return self.validate_reply(reply)
 
     def get_highest_rated_comment(self, raw_data):
