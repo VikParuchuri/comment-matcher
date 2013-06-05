@@ -38,13 +38,21 @@ def write_data_to_cache(raw_data, filename, unique_key="message"):
         pickle.dump(raw_data_cache, openfile)
     return raw_data_cache
 
-def get_single_comment(subreddit):
-    r = praw.Reddit(user_agent='comment_matcher by /u/vikparuchuri github.com/VikParuchuri/comment_matcher/')
-    subreddit = r.get_subreddit(subreddit)
-    hourly_top = subreddit.get_top_from_hour(limit=1)
-    comments = forest_comments = [c for c in hourly_top[0].comments if isinstance(c, Comment)]
-    rand_int = random.randint(0,len(comments))
-    random_comment = comments[rand_int]
+def get_single_comment(subreddit_name):
+    comment_found = False
+    index = 0
+    while not comment_found:
+        r = praw.Reddit(user_agent='comment_matcher by /u/vikparuchuri github.com/VikParuchuri/comment_matcher/')
+        subreddit = r.get_subreddit(subreddit_name)
+        hourly_top = list(subreddit.get_top_from_hour(limit=(index+1)))
+        comments = [c for c in hourly_top[index].comments if isinstance(c, Comment)]
+        index += 1
+        if len(comments)>2:
+            rand_int = random.randint(0,len(comments))
+            random_comment = comments[rand_int]
+            comment_found = True
+        if index>10:
+            return None
     return random_comment
 
 def get_submission_reply_pairs(submission, max_replies = MAX_REPLIES, min_reply_score = MIN_REPLY_SCORE):

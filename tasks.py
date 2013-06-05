@@ -53,7 +53,7 @@ def single_instance_task(timeout):
     return task_exc
 
 @periodic_task(run_every=timedelta(minutes = 30))
-@single_instance_task(timeout=3 * 60 * 60)
+@single_instance_task(timeout=6 * 60 * 60)
 def get_reddit_posts():
     try:
         all_message_replies = []
@@ -73,14 +73,16 @@ def pull_down_comments():
         time.sleep(sleep_time)
         raw_data = read_raw_data_from_cache("raw_data_cache.p")
         items_done = read_raw_data_from_cache("items_done.p")
-        comments = [c['text'] for c in items_done]
+        comments = [c['comment'] for c in items_done]
         replies = [c['reply'] for c in items_done]
         knn_matcher = train_knn_matcher(raw_data)
         for subreddit in SUBREDDIT_LIST:
             comment = get_single_comment(subreddit)
+            if comment is None:
+                continue
             text = comment.body
             cid = comment.id
-            reply = test_knn_matcher(knn_matcher, comment)
+            reply = test_knn_matcher(knn_matcher, text)
             if text in comments or reply in replies:
                 continue
             data = {'comment' : text, 'reply' : reply, 'comment_id' : cid}

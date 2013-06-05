@@ -12,6 +12,11 @@ from fisher import pvalue
 import random
 import math
 import pickle
+import logging
+import sys
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.StreamHandler(sys.stdout))
 
 MIN_WORDS = 2
 MAX_COMMENT_LENGTH = 100
@@ -89,6 +94,8 @@ class KNNCommentMatcher(object):
         return rep_frame['replies'][rand_int]
 
     def validate_reply(self, reply):
+        if isinstance(reply, list):
+            reply = reply[0]
         if len(reply.split(" "))<MIN_WORDS:
             return None
         elif len(reply)> MAX_COMMENT_LENGTH:
