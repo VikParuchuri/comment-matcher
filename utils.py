@@ -4,7 +4,10 @@ from praw.objects import Comment, MoreComments
 import random
 import logging
 import pickle
+import sys
+
 log = logging.getLogger(__name__)
+log.addHandler(logging.StreamHandler(sys.stdout))
 
 MAX_REPLIES = 500
 MIN_REPLY_SCORE = 2
@@ -30,7 +33,7 @@ def write_data_to_cache(raw_data, filename, unique_key="message"):
             del raw_data_messages[del_index]
     raw_data_to_write = [r for r in raw_data if r not in raw_data_cache]
     raw_data_cache += raw_data_to_write
-    
+
     with open(filename, "w") as openfile:
         pickle.dump(raw_data_cache, openfile)
     return raw_data_cache
@@ -66,7 +69,7 @@ def get_submission_reply_pairs(submission, max_replies = MAX_REPLIES, min_reply_
                 scores = [ar.score for ar in actual_replies]
                 if len(reply_text)>0:
                     message_replies.append(MessageReply(comment.body, comment.score, reply_text, scores))
-            except:
+            except Exception:
                 log.exception("Could not pull single comment data.")
                 continue
         forest_comments = [ar for ar in actual_replies if isinstance(actual_replies, Comment)]

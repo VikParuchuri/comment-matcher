@@ -9,7 +9,6 @@ import pandas as pd
 from utils import get_message_replies, MessageReply, get_submission_reply_pairs, MAX_FEATURES
 
 
-
 def subtract_if_not_zero(input_val, subtract_num):
     if input_val==0:
         return input_val
