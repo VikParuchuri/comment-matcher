@@ -74,18 +74,42 @@ class Vectorizer(object):
     def fit(self, input_text, input_scores):
         self.spell_corrector = SpellCorrector()
         self.stemmer = PorterStemmer()
-        input_text = [t + self.generate_new_text(t) for t in input_text]
+        new_text = self.batch_generate_new_text(input_text)
+        input_text = [input_text[i] + new_text[i] for i in xrange(0,len(input_text))]
         self.vectorizer1 = CountVectorizer(ngram_range=(1,2), min_df = 3/len(input_text), max_df=.4)
         self.vectorizer1.fit(input_text)
         self.vocab = self.get_vocab(input_text, input_scores)
         self.vectorizer = CountVectorizer(ngram_range=(1,2), vocabulary=self.vocab)
         self.fit_done = True
+        self.input_text = input_text
 
     def spell_correct_text(self, text):
         text = text.lower()
         split = text.split(" ")
         corrected = [self.spell_corrector.correct(w) for w in split]
         return corrected
+
+    def batch_apply(self, all_tokens, applied_func):
+        for key in all_tokens:
+            cor = applied_func(all_tokens[key])
+            all_tokens[key] = cor
+        return all_tokens
+
+    def batch_generate_new_text(self, text):
+        text = [re.sub("[^A-Za-z0-9]", " ", t.lower()) for t in text]
+        text = [re.sub("\s+", " ", t) for t in text]
+        t_tokens = [t.split(" ") for t in text]
+        all_token_list = list(set(chain.from_iterable(t_tokens)))
+        all_token_dict = {}
+        for t in all_token_list:
+            all_token_dict.update({t : t})
+        all_token_dict = self.batch_apply(all_token_dict, self.stemmer.stem)
+        all_token_dict = self.batch_apply(all_token_dict, self.stemmer.stem)
+        for i in xrange(0,len(t_tokens)):
+            for j in xrange(0,len(t_tokens[i])):
+                t_tokens[i][j] = all_token_dict.get(t_tokens[i][j], t_tokens[i][j])
+        new_text = [" ".join(t) for t in t_tokens]
+        return new_text
 
     def generate_new_text(self, text):
         no_punctuation = re.sub("[^A-Za-z0-9]", " ", text.lower())
@@ -117,6 +141,13 @@ class Vectorizer(object):
         vocab = getVar(self.vectorizer1.get_feature_names(), p_frame['inds'][:2000])
         return vocab
 
+    def batch_get_features(self, text):
+        if not self.fit_done:
+            raise Exception("Vectorizer has not been created.")
+        new_text = self.batch_generate_new_text(text)
+        text = [text[i] + new_text[i] for i in xrange(0,len(text))]
+        return (self.vectorizer.transform(text).todense())
+
     def get_features(self, text):
         if not self.fit_done:
             raise Exception("Vectorizer has not been created.")
@@ -139,7 +170,7 @@ class KNNCommentMatcher(object):
 
     def fit(self):
         self.vectorizer.fit(self.messages, self.message_scores)
-        self.train_mat = self.vectorizer.get_features(self.messages)
+        self.train_mat = self.vectorizer.batch_get_features(self.messages)
 
     def find_nearest_match(self, text):
         test_vec = np.asarray(self.vectorizer.get_features(text))
@@ -164,11 +195,10 @@ class KNNCommentMatcher(object):
     def get_highest_rated_comment(self, raw_data):
         rep_frame =  pd.DataFrame(np.array([raw_data['scores'], raw_data['replies']]).transpose(), columns=["scores", "replies"])
         rep_frame.sort(['scores'], ascending=False)
-        rand_int = random.randint(0,min([10, len(raw_data['replies'])-1]))
+        rand_int = random.randint(0,min([20, len(raw_data['replies'])-1]))
         return rep_frame['replies'][rand_int]
 
     def validate_reply(self, reply):
-        print reply
         if isinstance(reply, list):
             reply = reply[0]
         if len(reply.split(" "))<MIN_WORDS:
@@ -230,11 +260,12 @@ def test_accuracy(test_results, raw_data):
     return correct
 
 if __name__ == '__main__':
-    message_replies = get_message_replies(subreddit = "funny", max_replies= 500, submission_count = 300, min_reply_score = 20)
+    #message_replies = get_message_replies(subreddit = "funny", max_replies= 500, submission_count = 300, min_reply_score = 20)
+    #raw_data = write_data_to_cache(raw_data, "raw_data_cache.p")
 
-    raw_data = list([mr.get_raw_data() for mr in message_replies])
-
-    raw_data = write_data_to_cache(raw_data, "raw_data_cache.p")
+    raw_data = read_raw_data_from_cache("raw_data_cache.p")
+    knn_matcher = train_knn_matcher(raw_data)
+    message = test_knn_matcher(knn_matcher, raw_data[1]['message'])
 
     test_results = cross_validate(raw_data,train_knn_matcher, test_knn_matcher)
 

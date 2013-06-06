@@ -16,7 +16,8 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler(sys.stdout))
 
 celery = Celery('tasks', broker=settings.BROKER_URL, backend=settings.CELERY_RESULT_BACKEND)
-SUBREDDIT_LIST = ["funny", "pics", "gaming"]
+COMMENT_SUBREDDIT_LIST = ["funny", "pics", "gaming", "bestof", "movies", "offbeat", "mildlyinteresting", "humor", "jokes"]
+REPLY_SUBREDDIT_LIST = ["funny", "pics", "gaming", "askreddit"]
 
 class FileCache(object):
     def __init__(self, lock_name, lock_time = 3600):
@@ -58,7 +59,7 @@ def single_instance_task(timeout):
 def get_reddit_posts():
     try:
         all_message_replies = []
-        for subreddit in SUBREDDIT_LIST:
+        for subreddit in COMMENT_SUBREDDIT_LIST:
             message_replies = get_message_replies(subreddit =subreddit, max_replies= 500, submission_count = 300, min_reply_score = 20)
             all_message_replies += message_replies
         raw_data = list([mr.get_raw_data() for mr in all_message_replies])
@@ -77,25 +78,29 @@ def pull_down_comments():
         comments = [c['comment'] for c in items_done]
         replies = [c['reply'] for c in items_done]
         knn_matcher = train_knn_matcher(raw_data)
-        for subreddit in SUBREDDIT_LIST:
-            comment = get_single_comment(subreddit)
-            print comment
-            if comment is None:
-                log.info("Could not get a comment")
+        for subreddit in REPLY_SUBREDDIT_LIST:
+            try:
+                comment = get_single_comment(subreddit)
+                print comment
+                if comment is None:
+                    log.info("Could not get a comment")
+                    continue
+                text = comment.body
+                cid = comment.id
+                reply = test_knn_matcher(knn_matcher, text)
+                if text in comments or (reply in replies and reply is not None):
+                    continue
+                data = {'comment' : text, 'reply' : reply, 'comment_id' : cid}
+                items_done.append(data)
+                replies.append(reply)
+                comments.append(text)
+                log.info("Subreddit: {0}".format(subreddit))
+                log.info("Comment: {0} {1}".format(cid, text))
+                log.info("Reply: {0}".format(reply))
+                log.info("-------------------")
+            except:
+                log.exception("Cannot get reply for {0}".format(subreddit))
                 continue
-            text = comment.body
-            cid = comment.id
-            reply = test_knn_matcher(knn_matcher, text)
-            if text in comments or (reply in replies and reply is not None):
-                continue
-            data = {'comment' : text, 'reply' : reply, 'comment_id' : cid}
-            items_done.append(data)
-            replies.append(reply)
-            comments.append(text)
-            log.info("Subreddit: {0}".format(subreddit))
-            log.info("Comment: {0} {1}".format(cid, text))
-            log.info("Reply: {0}".format(reply))
-            log.info("-------------------")
         write_data_to_cache(items_done, "items_done.p", "comment_id")
     except Exception:
         log.exception("Could not pull down comment.")
