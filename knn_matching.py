@@ -63,6 +63,7 @@ class SpellCorrector(object):
         for p in self.punctuation:
             if word.endswith(p):
                 suffix = p
+                word = word[:-1]
         candidates = self.known([word]) or self.known(self.edits1(word)) or self.known_edits2(word) or [word]
         word = max(candidates, key=self.NWORDS.get)
         return word + suffix
@@ -195,7 +196,7 @@ class KNNCommentMatcher(object):
     def get_highest_rated_comment(self, raw_data):
         rep_frame =  pd.DataFrame(np.array([raw_data['scores'], raw_data['replies']]).transpose(), columns=["scores", "replies"])
         rep_frame.sort(['scores'], ascending=False)
-        rand_int = random.randint(0,min([20, len(raw_data['replies'])-1]))
+        rand_int = random.randint(0,len(raw_data['replies'])-1)
         return rep_frame['replies'][rand_int]
 
     def validate_reply(self, reply):

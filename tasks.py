@@ -16,8 +16,8 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler(sys.stdout))
 
 celery = Celery('tasks', broker=settings.BROKER_URL, backend=settings.CELERY_RESULT_BACKEND)
-COMMENT_SUBREDDIT_LIST = ["funny", "pics", "gaming", "bestof", "movies", "offbeat", "mildlyinteresting", "humor", "jokes"]
-REPLY_SUBREDDIT_LIST = ["funny", "pics", "gaming", "askreddit"]
+COMMENT_SUBREDDIT_LIST = ["gaming", "bestof", "movies", "offbeat", "mildlyinteresting", "humor", "jokes", "reactiongifs"]
+REPLY_SUBREDDIT_LIST = ["funny", "pics", "aww", "gifs"]
 
 class FileCache(object):
     def __init__(self, lock_name, lock_time = 3600):
