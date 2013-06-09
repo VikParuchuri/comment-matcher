@@ -110,7 +110,7 @@ def get_message_replies(subreddit = SUBREDDIT, max_replies = MAX_REPLIES, submis
     subreddit = r.get_subreddit(subreddit)
 
     message_replies = []
-    for submission in subreddit.get_top_from_week(limit=submission_count):
+    for submission in subreddit.get_top_from_day(limit=submission_count):
         message_replies += get_submission_reply_pairs(submission, max_replies = max_replies, min_reply_score = min_reply_score)
         if len(message_replies)>=max_replies:
             break
