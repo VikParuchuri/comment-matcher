@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler(sys.stdout))
 
 MAX_REPLIES = 500
-MIN_REPLY_SCORE = 2
+MIN_REPLY_SCORE = 10
 MAX_FEATURES = 2000
 MAX_REPLY_LENGTH = 250
 SUBMISSION_COUNT = 100

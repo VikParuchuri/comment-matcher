@@ -137,7 +137,7 @@ class Vectorizer(object):
             pvalues.append(pval.two_tail)
         col_inds = list(xrange(0,train_mat.shape[1]))
         p_frame = pd.DataFrame(np.array([col_inds, pvalues]).transpose(), columns=["inds", "pvalues"])
-        p_frame.sort(['pvalues'], ascending=True)
+        p_frame = p_frame.sort(['pvalues'], ascending=True)
         getVar = lambda searchList, ind: [searchList[int(i)] for i in ind]
         vocab = getVar(self.vectorizer1.get_feature_names(), p_frame['inds'][:2000])
         return vocab
